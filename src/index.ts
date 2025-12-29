@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
+import { userCreateSchema, userIdParamSchema } from './schemas/user';
 
 // 環境変数の読み込み
 dotenv.config();
@@ -47,21 +48,17 @@ app.get('/api/users', async (req: Request, res: Response) => {
     }
 });
 
-
-// ユーザー個別取得（APIパス一貫性のためのエイリアス）
+// ユーザー個別取得
 app.get('/api/users/:id', async (req: Request, res: Response) => {
     try {
-        const idParam = req.params.id;
-        const id = Number(idParam);
-
-        if (!Number.isInteger(id) || id <= 0) {
-            res.status(400).json({ error: 'id は正の整数で指定してください' });
+        const parsed = userIdParamSchema.safeParse(req.params);
+        if (!parsed.success) {
+            res.status(400).json({ error: parsed.error.issues[0]?.message ?? '不正なリクエストです' });
             return;
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id }
-        });
+        const { id } = parsed.data;
+        const user = await prisma.user.findUnique({ where: { id } });
 
         if (!user) {
             res.status(404).json({ error: 'ユーザーが見つかりませんでした' });
@@ -80,29 +77,21 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
 // ユーザー作成
 app.post('/api/users', async (req: Request, res: Response) => {
     try {
-        const { name, email } = req.body;
-
-        // バリデーション
-        if (!name || !email) {
-            res.status(400).json({
-                error: 'name と email は必須です'
-            });
+        const parsed = userCreateSchema.safeParse(req.body);
+        if (!parsed.success) {
+            res.status(400).json({ error: parsed.error.issues[0]?.message ?? '不正な入力です' });
             return;
         }
 
+        const { name, email } = parsed.data;
         const user = await prisma.user.create({
-            data: {
-                name,
-                email
-            }
+            data: { name, email }
         });
 
         res.status(201).json(user);
     } catch (error) {
         if (error instanceof Error && error.message.includes('Unique constraint failed')) {
-            res.status(400).json({
-                error: 'このメールアドレスは既に登録されています'
-            });
+            res.status(400).json({ error: 'このメールアドレスは既に登録されています' });
         } else {
             res.status(500).json({
                 error: 'ユーザーの作成に失敗しました',
