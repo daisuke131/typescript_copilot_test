@@ -139,6 +139,33 @@ app.patch('/api/users/:id', async (req: Request, res: Response) => {
     }
 });
 
+// ユーザー削除
+app.delete('/api/users/:id', async (req: Request, res: Response) => {
+    try {
+        const parsed = userIdParamSchema.safeParse(req.params);
+        if (!parsed.success) {
+            res.status(400).json({ error: parsed.error.issues[0]?.message ?? '不正なリクエストです' });
+            return;
+        }
+
+        const { id } = parsed.data;
+        const user = await prisma.user.delete({
+            where: { id }
+        });
+
+        res.json(user);
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('An operation failed because it depends on one or more records that were required but not found')) {
+            res.status(404).json({ error: 'ユーザーが見つかりませんでした' });
+        } else {
+            res.status(500).json({
+                error: 'ユーザーの削除に失敗しました',
+                details: error instanceof Error ? error.message : '不明なエラー'
+            });
+        }
+    }
+});
+
 // エラーハンドリングミドルウェア
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);

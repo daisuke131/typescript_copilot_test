@@ -236,5 +236,49 @@ describe('User Endpoints', () => {
             expect(updateResponse.body).toHaveProperty('error');
         });
     });
+
+    describe('DELETE /api/users/:id', () => {
+        it('should delete a user', async () => {
+            // ユーザーを作成
+            const createResponse = await request(app)
+                .post('/api/users')
+                .send({ name: 'User to Delete', email: 'delete@example.com' })
+                .expect(201);
+
+            const userId = createResponse.body.id;
+
+            // ユーザーを削除
+            const deleteResponse = await request(app)
+                .delete(`/api/users/${userId}`)
+                .expect(200);
+
+            expect(deleteResponse.body.id).toBe(userId);
+            expect(deleteResponse.body.name).toBe('User to Delete');
+
+            // 削除後はユーザーが存在しないことを確認
+            const getResponse = await request(app)
+                .get(`/api/users/${userId}`)
+                .expect(404);
+
+            expect(getResponse.body).toHaveProperty('error');
+        });
+
+        it('should return 404 when deleting not found user', async () => {
+            const response = await request(app)
+                .delete('/api/users/999999')
+                .expect(404);
+
+            expect(response.body).toHaveProperty('error');
+        });
+
+        it('should return 400 for invalid id', async () => {
+            const response = await request(app)
+                .delete('/api/users/abc')
+                .expect(400);
+
+            expect(response.body).toHaveProperty('error');
+        });
+    });
 });
+
 
