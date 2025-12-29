@@ -121,8 +121,10 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 // アプリケーションをエクスポート（テスト用）
 export default app;
 
-// サーバー起動
-app.listen(PORT, () => {
-    console.log(`サーバーがポート ${PORT} で起動しました`);
-    console.log(`http://localhost:${PORT}`);
-});
+// サーバー起動（テスト時は起動しない）
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        console.log(`サーバーがポート ${PORT} で起動しました`);
+        console.log(`http://localhost:${PORT}`);
+    });
+}
