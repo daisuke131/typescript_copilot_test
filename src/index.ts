@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
-import { userCreateSchema, userIdParamSchema } from './schemas/user';
+import { userCreateSchema, userUpdateSchema, userIdParamSchema } from './schemas/user';
 
 // 環境変数の読み込み
 dotenv.config();
@@ -95,6 +95,44 @@ app.post('/api/users', async (req: Request, res: Response) => {
         } else {
             res.status(500).json({
                 error: 'ユーザーの作成に失敗しました',
+                details: error instanceof Error ? error.message : '不明なエラー'
+            });
+        }
+    }
+});
+
+// ユーザー更新
+app.patch('/api/users/:id', async (req: Request, res: Response) => {
+    try {
+        const paramsParsed = userIdParamSchema.safeParse(req.params);
+        if (!paramsParsed.success) {
+            res.status(400).json({ error: paramsParsed.error.issues[0]?.message ?? '不正なリクエストです' });
+            return;
+        }
+
+        const bodyParsed = userUpdateSchema.safeParse(req.body);
+        if (!bodyParsed.success) {
+            res.status(400).json({ error: bodyParsed.error.issues[0]?.message ?? '不正な入力です' });
+            return;
+        }
+
+        const { id } = paramsParsed.data;
+        const updateData = bodyParsed.data;
+
+        const user = await prisma.user.update({
+            where: { id },
+            data: updateData
+        });
+
+        res.json(user);
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('An operation failed because it depends on one or more records that were required but not found')) {
+            res.status(404).json({ error: 'ユーザーが見つかりませんでした' });
+        } else if (error instanceof Error && error.message.includes('Unique constraint failed')) {
+            res.status(400).json({ error: 'このメールアドレスは既に登録されています' });
+        } else {
+            res.status(500).json({
+                error: 'ユーザーの更新に失敗しました',
                 details: error instanceof Error ? error.message : '不明なエラー'
             });
         }

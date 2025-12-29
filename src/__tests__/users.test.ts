@@ -115,4 +115,126 @@ describe('User Endpoints', () => {
             expect(response.body).toHaveProperty('error');
         });
     });
+
+    describe('PATCH /api/users/:id', () => {
+        it('should update a user with both name and email', async () => {
+            // 既存ユーザーを作成
+            const createResponse = await request(app)
+                .post('/api/users')
+                .send({ name: 'Original Name', email: 'original@example.com' })
+                .expect(201);
+
+            const userId = createResponse.body.id;
+
+            // ユーザーを更新
+            const updateResponse = await request(app)
+                .patch(`/api/users/${userId}`)
+                .send({ name: 'Updated Name', email: 'updated@example.com' })
+                .expect(200);
+
+            expect(updateResponse.body.id).toBe(userId);
+            expect(updateResponse.body.name).toBe('Updated Name');
+            expect(updateResponse.body.email).toBe('updated@example.com');
+        });
+
+        it('should update a user with only name', async () => {
+            // 既存ユーザーを作成
+            const createResponse = await request(app)
+                .post('/api/users')
+                .send({ name: 'Original Name', email: 'onlyname@example.com' })
+                .expect(201);
+
+            const userId = createResponse.body.id;
+            const originalEmail = createResponse.body.email;
+
+            // nameだけを更新
+            const updateResponse = await request(app)
+                .patch(`/api/users/${userId}`)
+                .send({ name: 'New Name' })
+                .expect(200);
+
+            expect(updateResponse.body.id).toBe(userId);
+            expect(updateResponse.body.name).toBe('New Name');
+            expect(updateResponse.body.email).toBe(originalEmail);
+        });
+
+        it('should update a user with only email', async () => {
+            // 既存ユーザーを作成
+            const createResponse = await request(app)
+                .post('/api/users')
+                .send({ name: 'Original Name', email: 'onlyemail@example.com' })
+                .expect(201);
+
+            const userId = createResponse.body.id;
+            const originalName = createResponse.body.name;
+
+            // emailだけを更新
+            const updateResponse = await request(app)
+                .patch(`/api/users/${userId}`)
+                .send({ email: 'newemail@example.com' })
+                .expect(200);
+
+            expect(updateResponse.body.id).toBe(userId);
+            expect(updateResponse.body.name).toBe(originalName);
+            expect(updateResponse.body.email).toBe('newemail@example.com');
+        });
+
+        it('should return 400 if both name and email are empty', async () => {
+            const response = await request(app)
+                .patch('/api/users/1')
+                .send({})
+                .expect(400);
+
+            expect(response.body).toHaveProperty('error');
+        });
+
+        it('should return 400 if email is invalid', async () => {
+            const response = await request(app)
+                .patch('/api/users/1')
+                .send({ email: 'invalid-email' })
+                .expect(400);
+
+            expect(response.body).toHaveProperty('error');
+        });
+
+        it('should return 404 for not found user', async () => {
+            const response = await request(app)
+                .patch('/api/users/999999')
+                .send({ name: 'Updated Name' })
+                .expect(404);
+
+            expect(response.body).toHaveProperty('error');
+        });
+
+        it('should return 400 for invalid id', async () => {
+            const response = await request(app)
+                .patch('/api/users/abc')
+                .send({ name: 'Updated Name' })
+                .expect(400);
+
+            expect(response.body).toHaveProperty('error');
+        });
+
+        it('should return 400 if duplicate email during update', async () => {
+            // 2つのユーザーを作成
+            const user1 = await request(app)
+                .post('/api/users')
+                .send({ name: 'User 1', email: 'user1@example.com' })
+                .expect(201);
+
+            const user2 = await request(app)
+                .post('/api/users')
+                .send({ name: 'User 2', email: 'user2@example.com' })
+                .expect(201);
+
+            // user2のメールアドレスをuser1と同じにしようとする
+            const updateResponse = await request(app)
+                .patch(`/api/users/${user2.body.id}`)
+                .send({ email: 'user1@example.com' })
+                .expect(400);
+
+            expect(updateResponse.body).toHaveProperty('error');
+        });
+    });
 });
+
