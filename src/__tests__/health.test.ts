@@ -111,6 +111,15 @@ describe('User Endpoints', () => {
             expect(response.body.email).toBe(newUser.email);
             expect(response.body).toHaveProperty('createdAt');
             expect(response.body).toHaveProperty('updatedAt');
+
+            // 個別取得の検証
+            const userId = response.body.id;
+            const getResponse = await request(app)
+                .get(`/user/${userId}`)
+                .expect(200);
+            expect(getResponse.body.id).toBe(userId);
+            expect(getResponse.body.name).toBe(newUser.name);
+            expect(getResponse.body.email).toBe(newUser.email);
         });
 
         it('should return 400 if name or email is missing', async () => {
@@ -137,6 +146,20 @@ describe('User Endpoints', () => {
                 .send({ name: 'Second User', email })
                 .expect(400);
 
+            expect(response.body).toHaveProperty('error');
+        });
+
+        it('should return 404 for not found user by id', async () => {
+            const response = await request(app)
+                .get('/user/999999')
+                .expect(404);
+            expect(response.body).toHaveProperty('error');
+        });
+
+        it('should return 400 for invalid id', async () => {
+            const response = await request(app)
+                .get('/user/abc')
+                .expect(400);
             expect(response.body).toHaveProperty('error');
         });
     });

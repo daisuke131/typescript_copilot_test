@@ -47,6 +47,35 @@ app.get('/api/users', async (req: Request, res: Response) => {
     }
 });
 
+// ユーザー個別取得（指定ID）
+app.get('/user/:id', async (req: Request, res: Response) => {
+    try {
+        const idParam = req.params.id;
+        const id = Number(idParam);
+
+        if (!Number.isInteger(id) || id <= 0) {
+            res.status(400).json({ error: 'id は正の整数で指定してください' });
+            return;
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id }
+        });
+
+        if (!user) {
+            res.status(404).json({ error: 'ユーザーが見つかりませんでした' });
+            return;
+        }
+
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({
+            error: 'ユーザーの取得に失敗しました',
+            details: error instanceof Error ? error.message : '不明なエラー'
+        });
+    }
+});
+
 // ユーザー作成
 app.post('/api/users', async (req: Request, res: Response) => {
     try {
