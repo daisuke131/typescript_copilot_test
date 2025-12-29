@@ -54,6 +54,9 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     res.status(500).json({ error: 'サーバーエラーが発生しました' });
 });
 
+// アプリケーションをエクスポート（テスト用）
+export default app;
+
 // サーバー起動
 app.listen(PORT, () => {
     console.log(`サーバーがポート ${PORT} で起動しました`);
