@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
 import { userCreateSchema, userUpdateSchema, userIdParamSchema } from './schemas/user';
+import { AppError, ValidationError, NotFoundError } from './lib/errors';
+import { handlePrismaError } from './lib/prismaErrorHandler';
 
 // 環境変数の読み込み
 dotenv.config();
@@ -49,38 +51,32 @@ app.get('/api/users', async (req: Request, res: Response) => {
 });
 
 // ユーザー個別取得
-app.get('/api/users/:id', async (req: Request, res: Response) => {
+app.get('/api/users/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const parsed = userIdParamSchema.safeParse(req.params);
         if (!parsed.success) {
-            res.status(400).json({ error: parsed.error.issues[0]?.message ?? '不正なリクエストです' });
-            return;
+            throw new ValidationError(parsed.error.issues[0]?.message ?? '不正なリクエストです');
         }
 
         const { id } = parsed.data;
         const user = await prisma.user.findUnique({ where: { id } });
 
         if (!user) {
-            res.status(404).json({ error: 'ユーザーが見つかりませんでした' });
-            return;
+            throw new NotFoundError('ユーザーが見つかりませんでした');
         }
 
         res.json(user);
     } catch (error) {
-        res.status(500).json({
-            error: 'ユーザーの取得に失敗しました',
-            details: error instanceof Error ? error.message : '不明なエラー'
-        });
+        next(error);
     }
 });
 
 // ユーザー作成
-app.post('/api/users', async (req: Request, res: Response) => {
+app.post('/api/users', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const parsed = userCreateSchema.safeParse(req.body);
         if (!parsed.success) {
-            res.status(400).json({ error: parsed.error.issues[0]?.message ?? '不正な入力です' });
-            return;
+            throw new ValidationError(parsed.error.issues[0]?.message ?? '不正な入力です');
         }
 
         const { name, email } = parsed.data;
@@ -90,30 +86,28 @@ app.post('/api/users', async (req: Request, res: Response) => {
 
         res.status(201).json(user);
     } catch (error) {
-        if (error instanceof Error && error.message.includes('Unique constraint failed')) {
-            res.status(400).json({ error: 'このメールアドレスは既に登録されています' });
-        } else {
-            res.status(500).json({
-                error: 'ユーザーの作成に失敗しました',
-                details: error instanceof Error ? error.message : '不明なエラー'
-            });
+        if (error instanceof AppError) {
+            return next(error);
+        }
+        try {
+            handlePrismaError(error);
+        } catch (prismaError) {
+            return next(prismaError);
         }
     }
 });
 
 // ユーザー更新
-app.patch('/api/users/:id', async (req: Request, res: Response) => {
+app.patch('/api/users/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const paramsParsed = userIdParamSchema.safeParse(req.params);
         if (!paramsParsed.success) {
-            res.status(400).json({ error: paramsParsed.error.issues[0]?.message ?? '不正なリクエストです' });
-            return;
+            throw new ValidationError(paramsParsed.error.issues[0]?.message ?? '不正なリクエストです');
         }
 
         const bodyParsed = userUpdateSchema.safeParse(req.body);
         if (!bodyParsed.success) {
-            res.status(400).json({ error: bodyParsed.error.issues[0]?.message ?? '不正な入力です' });
-            return;
+            throw new ValidationError(bodyParsed.error.issues[0]?.message ?? '不正な入力です');
         }
 
         const { id } = paramsParsed.data;
@@ -126,26 +120,23 @@ app.patch('/api/users/:id', async (req: Request, res: Response) => {
 
         res.json(user);
     } catch (error) {
-        if (error instanceof Error && error.message.includes('An operation failed because it depends on one or more records that were required but not found')) {
-            res.status(404).json({ error: 'ユーザーが見つかりませんでした' });
-        } else if (error instanceof Error && error.message.includes('Unique constraint failed')) {
-            res.status(400).json({ error: 'このメールアドレスは既に登録されています' });
-        } else {
-            res.status(500).json({
-                error: 'ユーザーの更新に失敗しました',
-                details: error instanceof Error ? error.message : '不明なエラー'
-            });
+        if (error instanceof AppError) {
+            return next(error);
+        }
+        try {
+            handlePrismaError(error);
+        } catch (prismaError) {
+            return next(prismaError);
         }
     }
 });
 
 // ユーザー削除
-app.delete('/api/users/:id', async (req: Request, res: Response) => {
+app.delete('/api/users/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const parsed = userIdParamSchema.safeParse(req.params);
         if (!parsed.success) {
-            res.status(400).json({ error: parsed.error.issues[0]?.message ?? '不正なリクエストです' });
-            return;
+            throw new ValidationError(parsed.error.issues[0]?.message ?? '不正なリクエストです');
         }
 
         const { id } = parsed.data;
@@ -155,21 +146,33 @@ app.delete('/api/users/:id', async (req: Request, res: Response) => {
 
         res.json(user);
     } catch (error) {
-        if (error instanceof Error && error.message.includes('An operation failed because it depends on one or more records that were required but not found')) {
-            res.status(404).json({ error: 'ユーザーが見つかりませんでした' });
-        } else {
-            res.status(500).json({
-                error: 'ユーザーの削除に失敗しました',
-                details: error instanceof Error ? error.message : '不明なエラー'
-            });
+        if (error instanceof AppError) {
+            return next(error);
+        }
+        try {
+            handlePrismaError(error);
+        } catch (prismaError) {
+            return next(prismaError);
         }
     }
 });
 
 // エラーハンドリングミドルウェア
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'サーバーエラーが発生しました' });
+app.use((err: Error | AppError, req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof AppError) {
+        console.error(`[${err.code}] ${err.message}`, err.details);
+        return res.status(err.statusCode).json({
+            code: err.code,
+            message: err.message,
+            ...(process.env.NODE_ENV === 'development' && { details: err.details })
+        });
+    }
+
+    console.error('[INTERNAL_SERVER_ERROR]', err instanceof Error ? err.message : err);
+    return res.status(500).json({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'サーバーエラーが発生しました'
+    });
 });
 
 // アプリケーションをエクスポート（テスト用）

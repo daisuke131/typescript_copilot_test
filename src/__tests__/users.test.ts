@@ -80,7 +80,8 @@ describe('User Endpoints', () => {
                 .send({ name: 'Test' })
                 .expect(400);
 
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
 
         it('should return 400 if email is duplicated', async () => {
@@ -98,21 +99,24 @@ describe('User Endpoints', () => {
                 .send({ name: 'Second User', email })
                 .expect(400);
 
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
 
         it('should return 404 for not found user by id', async () => {
             const response = await request(app)
                 .get('/api/users/999999')
                 .expect(404);
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
 
         it('should return 400 for invalid id', async () => {
             const response = await request(app)
                 .get('/api/users/abc')
                 .expect(400);
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
     });
 
@@ -185,7 +189,8 @@ describe('User Endpoints', () => {
                 .send({})
                 .expect(400);
 
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
 
         it('should return 400 if email is invalid', async () => {
@@ -194,7 +199,8 @@ describe('User Endpoints', () => {
                 .send({ email: 'invalid-email' })
                 .expect(400);
 
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
 
         it('should return 404 for not found user', async () => {
@@ -203,7 +209,8 @@ describe('User Endpoints', () => {
                 .send({ name: 'Updated Name' })
                 .expect(404);
 
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
 
         it('should return 400 for invalid id', async () => {
@@ -212,7 +219,8 @@ describe('User Endpoints', () => {
                 .send({ name: 'Updated Name' })
                 .expect(400);
 
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
 
         it('should return 400 if duplicate email during update', async () => {
@@ -233,7 +241,8 @@ describe('User Endpoints', () => {
                 .send({ email: 'user1@example.com' })
                 .expect(400);
 
-            expect(updateResponse.body).toHaveProperty('error');
+            expect(updateResponse.body).toHaveProperty('code');
+            expect(updateResponse.body).toHaveProperty('message');
         });
     });
 
@@ -260,7 +269,8 @@ describe('User Endpoints', () => {
                 .get(`/api/users/${userId}`)
                 .expect(404);
 
-            expect(getResponse.body).toHaveProperty('error');
+            expect(getResponse.body).toHaveProperty('code');
+            expect(getResponse.body).toHaveProperty('message');
         });
 
         it('should return 404 when deleting not found user', async () => {
@@ -268,7 +278,8 @@ describe('User Endpoints', () => {
                 .delete('/api/users/999999')
                 .expect(404);
 
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
 
         it('should return 400 for invalid id', async () => {
@@ -276,7 +287,8 @@ describe('User Endpoints', () => {
                 .delete('/api/users/abc')
                 .expect(400);
 
-            expect(response.body).toHaveProperty('error');
+            expect(response.body).toHaveProperty('code');
+            expect(response.body).toHaveProperty('message');
         });
     });
 });
