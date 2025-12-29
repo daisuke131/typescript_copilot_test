@@ -47,8 +47,9 @@ app.get('/api/users', async (req: Request, res: Response) => {
     }
 });
 
-// ユーザー個別取得（指定ID）
-app.get('/user/:id', async (req: Request, res: Response) => {
+
+// ユーザー個別取得（APIパス一貫性のためのエイリアス）
+app.get('/api/users/:id', async (req: Request, res: Response) => {
     try {
         const idParam = req.params.id;
         const id = Number(idParam);

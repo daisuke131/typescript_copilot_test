@@ -112,10 +112,10 @@ describe('User Endpoints', () => {
             expect(response.body).toHaveProperty('createdAt');
             expect(response.body).toHaveProperty('updatedAt');
 
-            // 個別取得の検証
+            // 個別取得の検証（APIパス）
             const userId = response.body.id;
             const getResponse = await request(app)
-                .get(`/user/${userId}`)
+                .get(`/api/users/${userId}`)
                 .expect(200);
             expect(getResponse.body.id).toBe(userId);
             expect(getResponse.body.name).toBe(newUser.name);
@@ -151,14 +151,14 @@ describe('User Endpoints', () => {
 
         it('should return 404 for not found user by id', async () => {
             const response = await request(app)
-                .get('/user/999999')
+                .get('/api/users/999999')
                 .expect(404);
             expect(response.body).toHaveProperty('error');
         });
 
         it('should return 400 for invalid id', async () => {
             const response = await request(app)
-                .get('/user/abc')
+                .get('/api/users/abc')
                 .expect(400);
             expect(response.body).toHaveProperty('error');
         });
