@@ -1,9 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
-import { userCreateSchema, userUpdateSchema, userIdParamSchema } from './schemas/user';
-import { AppError, ValidationError, NotFoundError } from './lib/errors';
-import { handlePrismaError } from './lib/prismaErrorHandler';
+import { AppError } from './lib/errors';
+import { UserController } from './controllers/userController';
 
 // 環境変数の読み込み
 dotenv.config();
@@ -37,125 +36,12 @@ app.get('/health', async (req: Request, res: Response) => {
     }
 });
 
-// ユーザー一覧取得
-app.get('/api/users', async (req: Request, res: Response) => {
-    try {
-        const users = await prisma.user.findMany();
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({
-            error: 'ユーザーの取得に失敗しました',
-            details: error instanceof Error ? error.message : '不明なエラー'
-        });
-    }
-});
-
-// ユーザー個別取得
-app.get('/api/users/:id', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const parsed = userIdParamSchema.safeParse(req.params);
-        if (!parsed.success) {
-            throw new ValidationError(parsed.error.issues[0]?.message ?? '不正なリクエストです');
-        }
-
-        const { id } = parsed.data;
-        const user = await prisma.user.findUnique({ where: { id } });
-
-        if (!user) {
-            throw new NotFoundError('ユーザーが見つかりませんでした');
-        }
-
-        res.json(user);
-    } catch (error) {
-        next(error);
-    }
-});
-
-// ユーザー作成
-app.post('/api/users', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const parsed = userCreateSchema.safeParse(req.body);
-        if (!parsed.success) {
-            throw new ValidationError(parsed.error.issues[0]?.message ?? '不正な入力です');
-        }
-
-        const { name, email } = parsed.data;
-        const user = await prisma.user.create({
-            data: { name, email }
-        });
-
-        res.status(201).json(user);
-    } catch (error) {
-        if (error instanceof AppError) {
-            return next(error);
-        }
-        try {
-            handlePrismaError(error);
-        } catch (prismaError) {
-            return next(prismaError);
-        }
-    }
-});
-
-// ユーザー更新
-app.patch('/api/users/:id', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const paramsParsed = userIdParamSchema.safeParse(req.params);
-        if (!paramsParsed.success) {
-            throw new ValidationError(paramsParsed.error.issues[0]?.message ?? '不正なリクエストです');
-        }
-
-        const bodyParsed = userUpdateSchema.safeParse(req.body);
-        if (!bodyParsed.success) {
-            throw new ValidationError(bodyParsed.error.issues[0]?.message ?? '不正な入力です');
-        }
-
-        const { id } = paramsParsed.data;
-        const updateData = bodyParsed.data;
-
-        const user = await prisma.user.update({
-            where: { id },
-            data: updateData
-        });
-
-        res.json(user);
-    } catch (error) {
-        if (error instanceof AppError) {
-            return next(error);
-        }
-        try {
-            handlePrismaError(error);
-        } catch (prismaError) {
-            return next(prismaError);
-        }
-    }
-});
-
-// ユーザー削除
-app.delete('/api/users/:id', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const parsed = userIdParamSchema.safeParse(req.params);
-        if (!parsed.success) {
-            throw new ValidationError(parsed.error.issues[0]?.message ?? '不正なリクエストです');
-        }
-
-        const { id } = parsed.data;
-        const user = await prisma.user.delete({
-            where: { id }
-        });
-
-        res.json(user);
-    } catch (error) {
-        if (error instanceof AppError) {
-            return next(error);
-        }
-        try {
-            handlePrismaError(error);
-        } catch (prismaError) {
-            return next(prismaError);
-        }
-    }
-});
+// ユーザーAPI
+app.get('/api/users', UserController.getUserList);
+app.get('/api/users/:id', UserController.getUser);
+app.post('/api/users', UserController.createUser);
+app.patch('/api/users/:id', UserController.updateUser);
+app.delete('/api/users/:id', UserController.deleteUser);
 
 // エラーハンドリングミドルウェア
 app.use((err: Error | AppError, req: Request, res: Response, next: NextFunction) => {
